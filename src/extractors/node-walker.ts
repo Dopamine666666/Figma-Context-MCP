@@ -86,6 +86,9 @@ async function processNodeWithExtractors(
     name: node.name,
     type: node.type === "VECTOR" ? "IMAGE-SVG" : node.type,
   };
+  if (!isVisible(node)) {
+    result.visible = false;
+  }
 
   // Apply all extractors to this node in a single pass
   for (const extractor of extractors) {
@@ -140,18 +143,6 @@ function shouldProcessNode(
   context: TraversalContext,
   options: TraversalOptions,
 ): boolean {
-  if (!isVisible(node)) {
-    // Rescue hidden nodes controlled by a boolean property inside component definitions
-    const hasVisibleRef =
-      "componentPropertyReferences" in node &&
-      node.componentPropertyReferences &&
-      typeof node.componentPropertyReferences === "object" &&
-      "visible" in node.componentPropertyReferences;
-    if (!(hasVisibleRef && context.insideComponentDefinition)) {
-      return false;
-    }
-  }
-
   if (options.nodeFilter && !options.nodeFilter(node)) {
     return false;
   }

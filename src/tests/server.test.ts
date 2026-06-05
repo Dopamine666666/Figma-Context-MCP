@@ -2,6 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { startHttpServer, stopHttpServer } from "../server.js";
 import type { AddressInfo } from "net";
+import { createServer as createNetServer } from "net";
 import type { FigmaAuthOptions } from "../services/figma.js";
 import { spawn, type ChildProcess } from "child_process";
 
@@ -173,7 +174,6 @@ describe("Server lifecycle", () => {
 });
 
 describe("Process-level HTTP startup", () => {
-  const TEST_PORT = 19876;
   let child: ChildProcess;
 
   afterEach(() => {
@@ -182,10 +182,42 @@ describe("Process-level HTTP startup", () => {
     }
   });
 
+  async function getFreePort(): Promise<number> {
+    return await new Promise<number>((resolve, reject) => {
+      const server = createNetServer();
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", () => {
+        const port = (server.address() as AddressInfo).port;
+        server.close((err) => (err ? reject(err) : resolve(port)));
+      });
+    });
+  }
+
   /** Spawn bin.ts and resolve once the server logs that it's listening. */
-  function spawnAndWaitForReady(): Promise<void> {
+  function spawnAndWaitForReady(port: number): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      child = spawn("tsx", ["src/bin.ts", `--figma-api-key=test-key`, `--port=${TEST_PORT}`], {
+      const isWin = process.platform === "win32";
+      const command = isWin ? "cmd" : "pnpm";
+      const args = isWin
+        ? [
+            "/c",
+            "pnpm",
+            "exec",
+            "tsx",
+            "src/bin.ts",
+            `--figma-api-key=test-key`,
+            `--port=${port}`,
+          ]
+        : [
+            "exec",
+            "tsx",
+            "src/bin.ts",
+            `--figma-api-key=test-key`,
+            `--port=${port}`,
+          ];
+
+      child = spawn(command, args, {
+        cwd: process.cwd(),
         stdio: ["pipe", "pipe", "pipe"],
       });
 
@@ -197,7 +229,7 @@ describe("Process-level HTTP startup", () => {
       // go to stderr. The config block logs to stdout via console.log.
       // Watch both streams to catch the "listening" message regardless.
       const onData = (chunk: Buffer) => {
-        if (chunk.toString().includes(`HTTP server listening on port ${TEST_PORT}`)) {
+        if (chunk.toString().includes(`HTTP server listening on port ${port}`)) {
           clearTimeout(timeout);
           resolve();
         }
@@ -218,9 +250,10 @@ describe("Process-level HTTP startup", () => {
   }
 
   it("starts HTTP server and accepts MCP initialize request", async () => {
-    await spawnAndWaitForReady();
+    const port = await getFreePort();
+    await spawnAndWaitForReady(port);
 
-    const res = await fetch(`http://127.0.0.1:${TEST_PORT}/mcp`, {
+    const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -215,44 +215,14 @@ function buildSimplifiedLayoutValues(
 
   // Handle dimensions based on layout growth and alignment
   if (isRectangle("absoluteBoundingBox", n)) {
-    const dimensions: { width?: number; height?: number; aspectRatio?: number } = {};
-
-    // Only include dimensions that aren't meant to stretch
-    if (mode === "row") {
-      // AutoLayout row, only include dimensions if the node is not growing
-      if (!n.layoutGrow && n.layoutSizingHorizontal == "FIXED")
-        dimensions.width = n.absoluteBoundingBox.width;
-      if (n.layoutAlign !== "STRETCH" && n.layoutSizingVertical == "FIXED")
-        dimensions.height = n.absoluteBoundingBox.height;
-    } else if (mode === "column") {
-      // AutoLayout column, only include dimensions if the node is not growing
-      if (n.layoutAlign !== "STRETCH" && n.layoutSizingHorizontal == "FIXED")
-        dimensions.width = n.absoluteBoundingBox.width;
-      if (!n.layoutGrow && n.layoutSizingVertical == "FIXED")
-        dimensions.height = n.absoluteBoundingBox.height;
-
-      if (n.preserveRatio) {
-        dimensions.aspectRatio = n.absoluteBoundingBox?.width / n.absoluteBoundingBox?.height;
-      }
-    } else {
-      // Node is not an AutoLayout. Include dimensions if the node is not growing (which it should never be)
-      if (!n.layoutSizingHorizontal || n.layoutSizingHorizontal === "FIXED") {
-        dimensions.width = n.absoluteBoundingBox.width;
-      }
-      if (!n.layoutSizingVertical || n.layoutSizingVertical === "FIXED") {
-        dimensions.height = n.absoluteBoundingBox.height;
-      }
+    const dimensions: { width: number; height: number; aspectRatio?: number } = {
+      width: pixelRound(n.absoluteBoundingBox.width),
+      height: pixelRound(n.absoluteBoundingBox.height),
+    };
+    if (mode === "column" && n.preserveRatio) {
+      dimensions.aspectRatio = n.absoluteBoundingBox.width / n.absoluteBoundingBox.height;
     }
-
-    if (Object.keys(dimensions).length > 0) {
-      if (dimensions.width) {
-        dimensions.width = pixelRound(dimensions.width);
-      }
-      if (dimensions.height) {
-        dimensions.height = pixelRound(dimensions.height);
-      }
-      layoutValues.dimensions = dimensions;
-    }
+    layoutValues.dimensions = dimensions;
   }
 
   return layoutValues;

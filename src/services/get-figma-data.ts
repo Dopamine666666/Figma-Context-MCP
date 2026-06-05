@@ -1,10 +1,6 @@
 import type { GetFileResponse, GetFileNodesResponse } from "@figma/rest-api-spec";
 import { FigmaService } from "~/services/figma.js";
-import {
-  simplifyRawFigmaObject,
-  allExtractors,
-  collapseSvgContainers,
-} from "~/extractors/index.js";
+import { simplifyRawFigmaObject, allExtractors } from "~/extractors/index.js";
 import { writeLogs } from "~/utils/logger.js";
 import { serializeResult } from "~/utils/serialize.js";
 import { tagError } from "~/utils/error-meta.js";
@@ -108,7 +104,6 @@ export async function getFigmaData(
     try {
       simplifiedDesign = await simplifyRawFigmaObject(rawApiResponse, allExtractors, {
         maxDepth: depth,
-        afterChildren: collapseSvgContainers,
         nodeCounter,
       });
     } catch (error) {

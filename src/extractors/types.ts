@@ -106,6 +106,10 @@ export interface SimplifiedNode {
   id: string;
   name: string;
   type: string; // e.g. FRAME, TEXT, INSTANCE, RECTANGLE, etc.
+  /**
+   * Figma's `visible` flag. Omitted when true to save tokens.
+   */
+  visible?: false;
   // text
   text?: string;
   textStyle?: string;
