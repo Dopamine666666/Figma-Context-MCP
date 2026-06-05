@@ -2,7 +2,8 @@ import type { GetFileResponse, GetFileNodesResponse } from "@figma/rest-api-spec
 import { FigmaService } from "~/services/figma.js";
 import { simplifyRawFigmaObject, allExtractors } from "~/extractors/index.js";
 import { writeLogs } from "~/utils/logger.js";
-import { serializeResult } from "~/utils/serialize.js";
+import { serializeResult, type OutputFormat } from "~/utils/serialize.js";
+import { wrapForSerialization } from "~/utils/serializable-design.js";
 import { tagError } from "~/utils/error-meta.js";
 import {
   type GetFigmaDataMetrics,
@@ -26,7 +27,7 @@ export type GetFigmaDataResult = {
 
 export type GetFigmaDataOutcome = {
   input: GetFigmaDataInput;
-  outputFormat: "yaml" | "json";
+  outputFormat: OutputFormat;
   durationMs: number;
   metrics?: GetFigmaDataMetrics;
   error?: unknown;
@@ -68,7 +69,7 @@ export type GetFigmaDataHooks = {
 export async function getFigmaData(
   figmaService: FigmaService,
   input: GetFigmaDataInput,
-  outputFormat: "yaml" | "json",
+  outputFormat: OutputFormat,
   hooks: GetFigmaDataHooks = {},
 ): Promise<GetFigmaDataResult> {
   const { fileKey, nodeId, depth } = input;
@@ -124,9 +125,7 @@ export async function getFigmaData(
     const serializeStart = Date.now();
     let formatted: string;
     try {
-      const { nodes, globalVars, ...metadata } = simplifiedDesign;
-      const result = { metadata, nodes, globalVars };
-      formatted = serializeResult(result, outputFormat);
+      formatted = serializeResult(wrapForSerialization(simplifiedDesign), outputFormat);
     } catch (error) {
       tagError(error, { phase: "serialize" });
     }
